@@ -1,0 +1,74 @@
+{
+    "name": "pipeline1",
+    "properties": {
+        "activities": [
+            {
+                "name": "Copy1",
+                "type": "Copy",
+                "policy": {
+                    "timeout": "7.00:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "BlobSource",
+                        "recursive": true
+                    },
+                    "sink": {
+                        "type": "BlobSink",
+                        "copyBehavior": "FlattenHierarchy"
+                    },
+                    "enableStaging": false,
+                    "cloudDataMovementUnits": 0
+                },
+                "inputs": [
+                    {
+                        "referenceName": "AzureBlob1",
+                        "type": "DatasetReference"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "referenceName": "AzureBlob1",
+                        "type": "DatasetReference"
+                    }
+                ]
+            },
+            {
+                "name": "Web1",
+                "type": "WebActivity",
+                "dependsOn": [
+                    {
+                        "activity": "Copy1",
+                        "dependencyConditions": [
+                            "Failed"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "7.00:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false
+                },
+                "typeProperties": {
+                    "url": "https://prod-27.eastus2.logic.azure.com:443/workflows/...",
+                    "method": "POST",
+                    "headers": {
+                        "log-customer": "Microsoft",
+                        "log-factory": "@pipeline().DataFactory",
+                        "log-pipeline": "@pipeline().Pipeline",
+                        "log-activity": "Copy1",
+                        "log-status": "Fail"
+                    },
+                    "body": {
+                        "value": "@activity('Copy1').output",
+                        "type": "Expression"
+                    }
+                }
+            }
+        ]
+    }
+}

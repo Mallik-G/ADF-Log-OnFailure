@@ -1,0 +1,111 @@
+{
+    "$connections": {
+        "value": {
+            "azureloganalyticsdatacollector": {
+                "connectionId": "/subscriptions/11111111-2222-3333-4444-555555555555/resourceGroups/activity-logger/providers/Microsoft.Web/connections/azureloganalyticsdatacollector",
+                "connectionName": "azureloganalyticsdatacollector",
+                "id": "/subscriptions/11111111-2222-3333-4444-555555555555/providers/Microsoft.Web/locations/eastus2/managedApis/azureloganalyticsdatacollector"
+            }
+        }
+    },
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "actions": {
+            "Add_Activity": {
+                "inputs": "@addProperty(outputs('Add_Pipeline'), 'activity', triggerOutputs()['headers']['log-activity'])",
+                "runAfter": {
+                    "Add_Pipeline": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Compose"
+            },
+            "Add_Customer": {
+                "inputs": "@addProperty(outputs('Get_Body_as_JSON'), 'customer', triggerOutputs()['headers']['log-customer'])",
+                "runAfter": {
+                    "Get_Body_as_JSON": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Compose"
+            },
+            "Add_Factory": {
+                "inputs": "@addProperty(outputs('Add_Customer'), 'factory', triggerOutputs()['headers']['log-factory'])",
+                "runAfter": {
+                    "Add_Customer": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Compose"
+            },
+            "Add_Pipeline": {
+                "inputs": "@addProperty(outputs('Add_Factory'), 'pipeline', triggerOutputs()['headers']['log-pipeline'])",
+                "runAfter": {
+                    "Add_Factory": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Compose"
+            },
+            "Add_Status": {
+                "inputs": "@addProperty(outputs('Add_Activity'), 'status', triggerOutputs()['headers']['log-status'])",
+                "runAfter": {
+                    "Add_Activity": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Compose"
+            },
+            "Get_Body_as_JSON": {
+                "inputs": "@triggerBody()",
+                "runAfter": {},
+                "type": "Compose"
+            },
+            "Send_Data": {
+                "inputs": {
+                    "body": "@{outputs('Add_Status')}",
+                    "headers": {
+                        "Log-Type": "ADFActivity"
+                    },
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['azureloganalyticsdatacollector']['connectionId']"
+                        }
+                    },
+                    "method": "post",
+                    "path": "/api/logs"
+                },
+                "runAfter": {
+                    "Add_Status": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "ApiConnection"
+            }
+        },
+        "contentVersion": "1.0.0.0",
+        "outputs": {},
+        "parameters": {
+            "$connections": {
+                "defaultValue": {},
+                "type": "Object"
+            }
+        },
+        "triggers": {
+            "manual": {
+                "inputs": {
+                    "schema": {
+                        "properties": {
+                            "details": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "kind": "Http",
+                "type": "Request"
+            }
+        }
+    }
+}
